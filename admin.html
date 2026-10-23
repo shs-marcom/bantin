@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quản trị bản tin SHS</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0A2762">
+<link rel="icon" href="assets/logo-light.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <a class="brand" href="./" target="_blank"><img src="assets/logo-dark.png" alt="SHS"><span class="brand-sep"></span><span class="brand-title">Quản trị bản tin<small>TT.Marcom SHS</small></span></a>
+  <div class="ad-user" id="who" hidden><span id="whoName"></span><button class="btn btn-ghost" id="logout">Đăng xuất</button></div>
+</div></header>
+
+<main class="wrap">
+  <section id="vLogin" class="card-box ad-login" hidden>
+    <h2>Đăng nhập quản trị</h2>
+    <label>Người dùng<select id="lName"></select></label>
+    <label>Mật khẩu<input type="password" id="lPw" autocomplete="current-password"></label>
+    <button class="btn btn-orange w100" id="lGo">Đăng nhập</button>
+    <p class="err" id="lErr"></p>
+    <p class="hint">Quên mật khẩu: liên hệ quản trị viên để đặt lại. Đóng tab trình duyệt là tự đăng xuất.</p>
+  </section>
+
+  <section id="vMsg" class="card-box ad-login" hidden></section>
+
+  <section id="vMain" hidden>
+    <div class="notice" id="tokWarn" hidden></div>
+    <div class="ad-stats">
+      <div class="card-box"><div class="stat-lb">Dung lượng đã dùng</div><div class="stat-v" id="usageTxt">...</div><div class="ubar"><i id="usageBar"></i></div><p class="hint">Giới hạn GitHub Pages: 1 GB. Xóa bản tin không làm giảm con số này.</p></div>
+      <div class="card-box"><div class="stat-lb">Mã truy cập GitHub</div><div class="stat-v" id="tokTxt">...</div><p class="hint" id="tokHint"></p></div>
+      <div class="card-box"><div class="stat-lb">Số bản tin</div><div class="stat-v" id="cntTxt">...</div><p class="hint"><a href="./" target="_blank">Mở trang công khai</a></p></div>
+    </div>
+
+    <div class="toolbar"><h2>Danh sách bản tin</h2><button class="btn btn-orange" id="bAdd">+ Thêm số mới</button></div>
+    <div id="list" class="ad-list"></div>
+
+    <div class="toolbar"><h2>Lịch sử thao tác</h2><button class="btn btn-line btn-sm" id="bReload">Tải lại</button></div>
+    <div id="hist" class="card-box ad-hist"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal"><div class="modal-box">
+  <h3 id="mTitle">Thêm số mới</h3>
+  <form id="form" novalidate>
+    <label>Tên bản tin *<input id="fTitle" maxlength="120" placeholder="VD: Mừng sinh nhật SHS 19 năm"></label>
+    <div class="row2">
+      <label>Số<input id="fSo" maxlength="40" placeholder="VD: Số 11/2026"></label>
+      <label>Ngày đăng *<input type="date" id="fDate"></label>
+    </div>
+    <label>Mô tả ngắn (hiện ở trang chủ)<textarea id="fDesc" rows="2" maxlength="300"></textarea></label>
+    <label><span id="fFileLb">File PDF *</span>
+      <div class="drop" id="drop"><input type="file" id="fFile" accept="application/pdf,.pdf"><span id="dropTxt">Kéo thả PDF vào đây hoặc bấm để chọn</span></div>
+    </label>
+    <p class="hint">Nên dưới 10MB để CBNV mở nhanh trên điện thoại. Tối đa 25MB. Canva: Share → Download → PDF Standard.</p>
+    <p class="err" id="fErr"></p>
+    <div class="modal-act"><button type="button" class="btn btn-line" id="mCancel">Hủy</button><button type="submit" class="btn btn-orange" id="mSave">Lưu</button></div>
+  </form>
+</div></div>
+
+<div class="busy" id="busy"><div><div class="spin"></div><p id="busyTxt"></p></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="assets/gh.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const $=s=>document.querySelector(s), esc=SHS.esc;
+const S={editing:null,file:null};
+const MAXMB=25, WARNMB=10;
+const show=id=>['vLogin','vMsg','vMain'].forEach(v=>$('#'+v).hidden=v!==id);
+const msg=html=>{$('#vMsg').innerHTML=html;show('vMsg')};
+
+/* ---------- Đăng nhập ---------- */
+async function boot(){
+  try{S.auth=await SHS.loadAuth()}catch(e){return msg('<h2>Chưa kết nối được</h2><p class="hint">Không đọc được cấu hình đăng nhập. Tải lại trang sau ít phút.</p>')}
+  if(!S.auth.users.length) return msg('<h2>Chưa thiết lập</h2><p class="hint">Trang quản trị chưa được thiết lập. Quản trị viên vào <a href="setup.html">trang thiết lập</a> để làm lần đầu.</p>');
+  const ses=SHS.session.get('admin');
+  if(ses&&ses.token) return start(ses);
+  $('#lName').innerHTML=S.auth.users.map(u=>`<option>${esc(u.name)}</option>`).join('');
+  show('vLogin');$('#lPw').focus();
+}
+async function doLogin(){
+  $('#lErr').textContent='';const name=$('#lName').value,pw=$('#lPw').value;
+  if(!pw) return $('#lErr').textContent='Nhập mật khẩu.';
+  SHS.busy('Đang kiểm tra mật khẩu...');
+  try{const r=await SHS.login(S.auth,name,pw);const ses={name,token:r.token};SHS.session.set('admin',ses);$('#lPw').value='';start(ses)}
+  catch(e){$('#lErr').textContent=e.message}
+  finally{SHS.busy(false)}
+}
+$('#lGo').onclick=doLogin;
+$('#lPw').onkeydown=e=>{if(e.key==='Enter')doLogin()};
+$('#logout').onclick=()=>{SHS.session.del('admin');location.reload()};
+
+function start(ses){
+  S.name=ses.name;S.api=SHS.gh(ses.token,S.auth.repo,S.auth.branch||'main');
+  $('#who').hidden=false;$('#whoName').textContent=ses.name;show('vMain');refresh();
+}
+function handleErr(e){
+  console.error(e);
+  if(e.status===401){SHS.session.del('admin');msg(`<h2>Mã truy cập hết hạn</h2><p class="hint">${esc(e.message)}</p><p class="hint">Quản trị viên vào <a href="setup.html">trang thiết lập</a> để thay mã mới. Mật khẩu của mọi người giữ nguyên.</p>`);return}
+  SHS.toast(e.message||'Có lỗi xảy ra',4000);
+}
+
+/* ---------- Tải dữ liệu ---------- */
+async function refresh(){
+  SHS.busy('Đang tải dữ liệu...');
+  try{
+    const [data,repo,commits]=await Promise.all([S.api.readJson('issues.json'),S.api.repoInfo(),S.api.commits(20)]);
+    S.issues=((data&&data.issues)||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    renderList();renderStats(repo);renderHist(commits);
+  }catch(e){handleErr(e)}finally{SHS.busy(false)}
+}
+function renderStats(repo){
+  const mb=(repo.size||0)/1024, pct=Math.min(100,mb/1024*100);
+  $('#usageTxt').textContent=`${SHS.num(mb)} MB (${SHS.num(pct)}%)`;
+  const bar=$('#usageBar');bar.style.width=Math.max(pct,1)+'%';bar.className=pct>85?'bad':pct>70?'warn':'';
+  $('#cntTxt').textContent=`${S.issues.length} số · ${S.issues.filter(x=>x.hidden).length} đang ẩn`;
+  const exp=S.auth.tokenExpires;
+  if(exp){
+    const days=Math.ceil((new Date(exp)-new Date())/864e5);
+    $('#tokTxt').textContent=days>=0?`Còn ${days} ngày`:'Đã hết hạn';
+    $('#tokHint').textContent='Hết hạn ngày '+SHS.fmtDate(exp);
+    if(days<=30){$('#tokWarn').hidden=false;$('#tokWarn').innerHTML=`Mã truy cập GitHub ${days>=0?'sẽ hết hạn sau '+days+' ngày':'đã hết hạn'}. Báo quản trị viên vào <b>trang thiết lập</b> để gia hạn, tránh gián đoạn đăng bản tin.`}
+  }else{$('#tokTxt').textContent='Đang hoạt động';$('#tokHint').textContent='Chưa khai báo ngày hết hạn.'}
+}
+function renderList(){
+  if(!S.issues.length){$('#list').innerHTML='<div class="card-box empty">Chưa có bản tin nào. Bấm "Thêm số mới" để đăng số đầu tiên.</div>';return}
+  $('#list').innerHTML=S.issues.map(it=>`
+    <div class="ad-row" data-id="${esc(it.id)}">
+      <div class="ad-thumb" data-id="${esc(it.id)}"></div>
+      <div class="ad-info">
+        <div class="ad-t">${esc(it.title)}</div>
+        <div class="ad-m">${it.so?`<span>${esc(it.so)}</span>·`:''}<span>${SHS.fmtDate(it.date)}</span>
+          <span class="badge ${it.hidden?'off':'on'}">${it.hidden?'Đang ẩn':'Đang hiện'}</span></div>
+      </div>
+      <div class="ad-act">
+        <a class="btn btn-line btn-sm" target="_blank" href="viewer.html?id=${encodeURIComponent(it.id)}">Xem</a>
+        <button class="btn btn-line btn-sm" data-a="edit">Sửa</button>
+        <button class="btn btn-line btn-sm" data-a="hide">${it.hidden?'Hiện lại':'Ẩn'}</button>
+        <button class="btn btn-line btn-sm danger" data-a="del">Xóa</button>
+      </div>
+    </div>`).join('');
+  document.querySelectorAll('.ad-thumb').forEach(el=>io.observe(el));
+}
+function renderHist(list){
+  $('#hist').innerHTML=(list||[]).map(c=>{
+    const d=new Date(c.commit.author.date);
+    const t=d.toLocaleDateString('vi-VN')+' '+d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+    return `<div><time>${t}</time><span>${esc(c.commit.message.split('\n')[0])}</span></div>`;
+  }).join('')||'<div>Chưa có thao tác.</div>';
+}
+/* Bìa nhỏ: đọc thẳng từ repo (có ngay sau khi lưu), chỉ tải phần đầu file */
+const rawUrl=p=>`https://raw.githubusercontent.com/${S.auth.repo}/${S.auth.branch||'main'}/${p}`;
+const io=new IntersectionObserver(es=>es.forEach(async e=>{
+  if(!e.isIntersecting)return;io.unobserve(e.target);
+  const it=S.issues.find(x=>x.id===e.target.dataset.id);if(!it)return;
+  try{
+    if(it.cover||(it.pages&&it.pages[0])){e.target.innerHTML=`<img src="${esc(rawUrl(it.cover||it.pages[0]))}" alt="">`;return}
+    const pdf=await pdfjsLib.getDocument({url:rawUrl(it.pdf)+'?v='+(it.v||''),disableAutoFetch:true,disableStream:true,rangeChunkSize:65536}).promise;
+    const pg=await pdf.getPage(1);const v0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:120/v0.width});
+    const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+    await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;e.target.appendChild(c);pdf.destroy();
+  }catch(err){}
+}),{rootMargin:'100px'});
+
+/* ---------- Ghi dữ liệu: luôn đọc bản mới nhất rồi mới sửa ---------- */
+async function save(label,mutate,extra){
+  SHS.busy('Đang lưu lên GitHub...');
+  try{
+    await S.api.commit(`Bản tin: ${label} (bởi ${S.name})`,async head=>{
+      const data=(await S.api.readJson('issues.json',head))||{issues:[]};
+      data.issues=data.issues||[];
+      const more=await mutate(data.issues)||[];
+      return [{path:'issues.json',text:JSON.stringify(data,null,2)+'\n'},...more,...(extra||[])];
+    });
+    SHS.toast('Đã lưu. Trang công khai cập nhật sau khoảng 1 đến 2 phút.',4000);
+    await refresh();return true;
+  }catch(e){handleErr(e);return false}finally{SHS.busy(false)}
+}
+
+$('#list').onclick=async e=>{
+  const b=e.target.closest('button[data-a]');if(!b)return;
+  const id=b.closest('.ad-row').dataset.id;const it=S.issues.find(x=>x.id===id);if(!it)return;
+  const a=b.dataset.a;
+  if(a==='edit') return openForm(it);
+  if(a==='hide'){
+    const hide=!it.hidden;
+    await save(`${hide?'ẩn':'hiện lại'} "${it.title}"`,list=>{const x=list.find(z=>z.id===id);if(!x)throw new Error('Bản tin này vừa bị người khác xóa.');if(hide)x.hidden=true;else delete x.hidden});
+  }
+  if(a==='del'){
+    if(!confirm(`Xóa "${it.title}"?\n\nLink đã gửi CBNV sẽ không mở được nữa. Nếu chỉ muốn gỡ tạm, hãy dùng nút Ẩn.`))return;
+    await save(`xóa "${it.title}"`,list=>{
+      const i=list.findIndex(z=>z.id===id);if(i<0)return [];
+      const [x]=list.splice(i,1);
+      const files=[x.pdf,x.cover,...(x.pages||[])].filter(p=>p&&p.startsWith('issues/'));
+      return files.map(p=>({path:p,delete:true}));
+    });
+  }
+};
+
+/* ---------- Form thêm / sửa ---------- */
+function openForm(it){
+  S.editing=it||null;S.file=null;$('#fErr').textContent='';$('#fFile').value='';
+  $('#mTitle').textContent=it?'Sửa bản tin':'Thêm số mới';
+  $('#fTitle').value=it?it.title:'';$('#fSo').value=it?(it.so||''):'';
+  $('#fDate').value=it?(it.date||''):SHS.today();$('#fDesc').value=it?(it.desc||''):'';
+  $('#fFileLb').textContent=it?'Thay file PDF (để trống nếu giữ file cũ)':'File PDF *';
+  setDrop();$('#modal').classList.add('open');setTimeout(()=>$('#fTitle').focus(),50);
+}
+function setDrop(){
+  const f=S.file,d=$('#drop');
+  d.classList.toggle('has',!!f);
+  $('#dropTxt').textContent=f?`${f.name} · ${SHS.num(f.size/1048576)} MB`:'Kéo thả PDF vào đây hoặc bấm để chọn';
+}
+$('#bAdd').onclick=()=>openForm(null);
+$('#mCancel').onclick=()=>$('#modal').classList.remove('open');
+$('#bReload').onclick=refresh;
+$('#fFile').onchange=()=>{S.file=$('#fFile').files[0]||null;setDrop()};
+['dragenter','dragover'].forEach(ev=>$('#drop').addEventListener(ev,()=>$('#drop').classList.add('over')));
+['dragleave','drop'].forEach(ev=>$('#drop').addEventListener(ev,()=>$('#drop').classList.remove('over')));
+
+$('#form').onsubmit=async e=>{
+  e.preventDefault();$('#fErr').textContent='';
+  const title=$('#fTitle').value.trim(),so=$('#fSo').value.trim(),date=$('#fDate').value,desc=$('#fDesc').value.trim();
+  const f=S.file,ed=S.editing;
+  if(!title) return $('#fErr').textContent='Nhập tên bản tin.';
+  if(!date) return $('#fErr').textContent='Chọn ngày đăng.';
+  if(!ed&&!f) return $('#fErr').textContent='Chọn file PDF.';
+  let blobSha=null;
+  if(f){
+    if(!(await SHS.isPdf(f))) return $('#fErr').textContent='File chọn không phải PDF.';
+    const mb=f.size/1048576;
+    if(mb>MAXMB) return $('#fErr').textContent=`File ${SHS.num(mb)} MB, vượt giới hạn ${MAXMB} MB. Nén lại (ilovepdf.com, Smallpdf) rồi thử lại.`;
+    if(mb>WARNMB&&!confirm(`File ${SHS.num(mb)} MB, khá nặng khi mở trên điện thoại. Vẫn đăng?`))return;
+    SHS.busy(`Đang tải file lên GitHub (${SHS.num(mb)} MB)...`);
+    try{blobSha=await S.api.blob(await SHS.fileB64(f))}catch(err){SHS.busy(false);return handleErr(err)}
+  }
+  const v=Date.now();
+  let ok;
+  if(ed){
+    ok=await save(`sửa "${title}"`,list=>{
+      const x=list.find(z=>z.id===ed.id);if(!x)throw new Error('Bản tin này vừa bị người khác xóa.');
+      Object.assign(x,{title,so,date,desc});if(!so)delete x.so;if(!desc)delete x.desc;
+      if(blobSha){if(!x.pdf||x.pages){x.pdf=`issues/${x.id}.pdf`;delete x.pages}x.v=v;return [{path:x.pdf,sha:blobSha}]}
+    });
+  }else{
+    const base=`${date.slice(0,7)}-${SHS.slug(title)}`;
+    ok=await save(`thêm "${title}"`,list=>{
+      let id=base,k=2;while(list.some(z=>z.id===id))id=`${base}-${k++}`;
+      const x={id,so,title,date,desc,pdf:`issues/${id}.pdf`,v};if(!so)delete x.so;if(!desc)delete x.desc;
+      list.unshift(x);return [{path:x.pdf,sha:blobSha}];
+    });
+  }
+  if(ok)$('#modal').classList.remove('open');
+};
+
+boot();
+</script>
+</body>
+</html>

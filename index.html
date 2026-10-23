@@ -66,7 +66,8 @@ async function drawCover(el,it){
       const img=new Image();img.alt=it.title;img.loading='lazy';img.src=it.cover||it.pages[0];
       img.onload=()=>el.classList.remove('skeleton');el.appendChild(img);return;
     }
-    const pdf=await pdfjsLib.getDocument(it.pdf).promise;
+    /* Chỉ tải phần đầu file đủ vẽ trang 1, tiết kiệm băng thông */
+    const pdf=await pdfjsLib.getDocument({url:it.pdf+(it.v?'?v='+it.v:''),disableAutoFetch:true,disableStream:true,rangeChunkSize:65536}).promise;
     const page=await pdf.getPage(1);
     const vp0=page.getViewport({scale:1});
     const scale=(el.clientWidth||200)*Math.min(devicePixelRatio||1,2)/vp0.width;

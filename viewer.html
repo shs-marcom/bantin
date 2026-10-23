@@ -96,14 +96,14 @@ async function load(){
   $('#title').innerHTML='';$('#title').textContent=issue.title;
   if(issue.so){const s=document.createElement('small');s.textContent=issue.so;$('#title').appendChild(s)}
   const dl=issue.download||issue.pdf;
-  if(dl){$('#bDl').href=dl;$('#bDl').setAttribute('download',dl.split('/').pop())}else $('#bDl').remove();
+  if(dl){$('#bDl').href=dl+(issue.v&&!issue.download?'?v='+issue.v:'');$('#bDl').setAttribute('download',dl.split('/').pop())}else $('#bDl').remove();
 
   try{
     if(issue.pages&&issue.pages.length){
       images=issue.pages;total=images.length;
       const im=new Image();im.src=images[0];await im.decode();ratio=im.naturalHeight/im.naturalWidth;
     }else{
-      pdf=await pdfjsLib.getDocument(issue.pdf).promise;total=pdf.numPages;
+      pdf=await pdfjsLib.getDocument(issue.pdf+(issue.v?'?v='+issue.v:'')).promise;total=pdf.numPages;
       const p1=await pdf.getPage(1);const v=p1.getViewport({scale:1});ratio=v.height/v.width;
       const targetW=Math.min(1400,Math.round(900*Math.min(devicePixelRatio||1,2)));
       for(let i=1;i<=total;i++){

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thiết lập quản trị bản tin SHS</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0A2762">
+<link rel="icon" href="assets/logo-light.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar"><div class="topbar-in">
+  <a class="brand" href="admin.html"><img src="assets/logo-dark.png" alt="SHS"><span class="brand-sep"></span><span class="brand-title">Thiết lập quản trị<small>Chỉ dành cho quản trị viên</small></span></a>
+  <div class="ad-user" id="who" hidden><span id="whoName"></span><button class="btn btn-ghost" id="logout">Đăng xuất</button></div>
+</div></header>
+
+<main class="wrap">
+  <!-- Lần đầu -->
+  <section id="vFirst" class="card-box" style="max-width:620px;margin:20px auto" hidden>
+    <h2>Thiết lập lần đầu</h2>
+    <div class="notice">Mã truy cập GitHub sẽ được mã hóa bằng mật khẩu của anh/chị trước khi lưu lên repo. Không ai đọc được mã nếu không có mật khẩu. Hướng dẫn tạo mã: xem mục B trong HUONG-DAN.md.</div>
+    <div class="row2">
+      <label>Repo (tài-khoản/tên-repo)<input id="sRepo" placeholder="marcom-shs/bantin"></label>
+      <label>Nhánh<input id="sBranch" value="main"></label>
+    </div>
+    <label>Mã truy cập GitHub (fine-grained token)<input id="sTok" type="password" autocomplete="off" placeholder="github_pat_..."></label>
+    <label>Ngày hết hạn của mã (đúng ngày đã chọn khi tạo mã)<input id="sExp" type="date"></label>
+    <div class="row2">
+      <label>Tên quản trị viên<input id="sName" placeholder="VD: Hiệp"></label>
+      <label>Mật khẩu (tối thiểu 12 ký tự)<input id="sPw" type="password" autocomplete="new-password"></label>
+    </div>
+    <label>Nhập lại mật khẩu<input id="sPw2" type="password" autocomplete="new-password"></label>
+    <button class="btn btn-orange w100" id="sGo">Kiểm tra mã và lưu thiết lập</button>
+    <p class="err" id="sErr"></p>
+  </section>
+
+  <!-- Đăng nhập quản trị viên -->
+  <section id="vLogin" class="card-box ad-login" hidden>
+    <h2>Đăng nhập quản trị viên</h2>
+    <label>Quản trị viên<select id="lName"></select></label>
+    <label>Mật khẩu<input type="password" id="lPw" autocomplete="current-password"></label>
+    <button class="btn btn-orange w100" id="lGo">Đăng nhập</button>
+    <p class="err" id="lErr"></p>
+    <p class="hint">Trang này chỉ dành cho người có vai trò Quản trị viên. Biên tập viên dùng <a href="admin.html">trang quản trị</a>.</p>
+  </section>
+
+  <section id="vMsg" class="card-box ad-login" hidden></section>
+
+  <!-- Quản lý -->
+  <section id="vMain" hidden>
+    <div class="notice ok" id="savedNote" hidden>Đã lưu. Người dùng mới hoặc mật khẩu mới dùng được sau khoảng 1 đến 2 phút (chờ trang cập nhật).</div>
+    <div class="setup-grid">
+      <div class="card-box">
+        <h3>Người dùng</h3>
+        <div class="ulist ad-list" id="ulist"></div>
+      </div>
+      <div class="card-box">
+        <h3>Thêm người dùng</h3>
+        <label>Tên hiển thị<input id="aName" placeholder="VD: Huệ"></label>
+        <label>Vai trò<select id="aRole"><option value="editor">Biên tập viên (đăng, sửa, xóa bản tin)</option><option value="owner">Quản trị viên (thêm cả quản lý người dùng)</option></select></label>
+        <label>Mật khẩu (tối thiểu 12 ký tự)<input id="aPw" type="password" autocomplete="new-password"></label>
+        <p class="hint">Gợi ý mật khẩu dễ nhớ mà khó dò: cụm 4 từ nối bằng gạch, vd <i>bantin-hoa-sen-thang-muoi</i>. Gửi mật khẩu cho người dùng qua kênh riêng.</p>
+        <button class="btn btn-blue" id="aGo" style="margin-top:10px">Thêm người dùng</button>
+        <p class="err" id="aErr"></p>
+      </div>
+      <div class="card-box">
+        <h3>Mã truy cập GitHub</h3>
+        <p class="hint" id="tokInfo"></p>
+        <label>Mã mới<input id="tTok" type="password" autocomplete="off" placeholder="github_pat_..."></label>
+        <label>Ngày hết hạn của mã mới<input id="tExp" type="date"></label>
+        <button class="btn btn-blue" id="tGo">Kiểm tra và thay mã</button>
+        <p class="hint">Dùng khi gia hạn hằng năm. Mật khẩu của mọi người giữ nguyên. Sau khi thay, xóa mã cũ trên GitHub.</p>
+        <p class="err" id="tErr"></p>
+      </div>
+      <div class="card-box">
+        <h3>Thu hồi triệt để</h3>
+        <p class="hint">Dùng khi nghi lộ mật khẩu hoặc có người rành kỹ thuật nghỉ việc. Hệ thống tạo khóa mới, cần mã GitHub mới và đặt lại mật khẩu cho tất cả người dùng khác. Nhớ xóa mã cũ trên GitHub.</p>
+        <label>Mã GitHub mới<input id="rTok" type="password" autocomplete="off"></label>
+        <label>Ngày hết hạn<input id="rExp" type="date"></label>
+        <label>Mật khẩu hiện tại của anh/chị<input id="rMy" type="password" autocomplete="current-password"></label>
+        <div id="rUsers"></div>
+        <button class="btn btn-line danger" id="rGo">Thu hồi và tạo khóa mới</button>
+        <p class="err" id="rErr"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="busy" id="busy"><div><div class="spin"></div><p id="busyTxt"></p></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="assets/gh.js"></script>
+<script>
+const $=s=>document.querySelector(s), esc=SHS.esc;
+const S={};
+const show=id=>['vFirst','vLogin','vMsg','vMain'].forEach(v=>$('#'+v).hidden=v!==id);
+const plusYear=()=>{const d=new Date();d.setFullYear(d.getFullYear()+1);return d.toISOString().slice(0,10)};
+const pwOk=(a,b)=>a.length<12?'Mật khẩu tối thiểu 12 ký tự.':(b!==undefined&&a!==b)?'Hai lần nhập mật khẩu không khớp.':'';
+
+async function checkToken(token,repo,branch){
+  const api=SHS.gh(token,repo,branch);
+  await api.repoInfo();   // repo tồn tại và mã đọc được
+  await api.commits(1);   // nhánh tồn tại
+  return api;
+}
+async function saveAuth(label){
+  await S.api.commit(`Quản trị: ${label} (bởi ${S.me})`,async()=>[{path:'auth.json',text:JSON.stringify(S.auth,null,2)+'\n'}]);
+  $('#savedNote').hidden=false;
+}
+
+/* ---------- Khởi động ---------- */
+async function boot(){
+  try{S.auth=await SHS.loadAuth()}catch(e){$('#vMsg').innerHTML='<h2>Chưa kết nối được</h2><p class="hint">Tải lại trang sau ít phút.</p>';return show('vMsg')}
+  if(!S.auth.users.length){
+    $('#sRepo').value=SHS.detectRepo();$('#sExp').value=plusYear();return show('vFirst');
+  }
+  const owners=S.auth.users.filter(u=>u.role==='owner');
+  $('#lName').innerHTML=owners.map(u=>`<option>${esc(u.name)}</option>`).join('');
+  show('vLogin');
+}
+
+/* ---------- Lần đầu ---------- */
+$('#sGo').onclick=async()=>{
+  $('#sErr').textContent='';
+  const repo=$('#sRepo').value.trim().replace(/^https?:\/\/github\.com\//,'').replace(/\/$/,''),branch=$('#sBranch').value.trim()||'main';
+  const token=$('#sTok').value.trim(),exp=$('#sExp').value,name=$('#sName').value.trim(),pw=$('#sPw').value;
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)) return $('#sErr').textContent='Repo phải có dạng tài-khoản/tên-repo.';
+  if(!token) return $('#sErr').textContent='Dán mã truy cập GitHub.';
+  if(!name) return $('#sErr').textContent='Nhập tên quản trị viên.';
+  const pe=pwOk(pw,$('#sPw2').value);if(pe) return $('#sErr').textContent=pe;
+  SHS.busy('Đang kiểm tra mã và mã hóa...');
+  try{
+    S.api=await checkToken(token,repo,branch);
+    S.K=SHS.newMaster();S.me=name;S.token=token;
+    S.auth={v:1,repo,branch,tokenExpires:exp,token:await SHS.encToken(S.K,token),users:[{name,role:'owner',...await SHS.wrapMaster(S.K,pw)}]};
+    await saveAuth('thiết lập lần đầu');
+    enter();SHS.toast('Đã thiết lập xong.');
+  }catch(e){$('#sErr').textContent=e.message}finally{SHS.busy(false)}
+};
+
+/* ---------- Đăng nhập ---------- */
+async function doLogin(){
+  $('#lErr').textContent='';const name=$('#lName').value,pw=$('#lPw').value;
+  if(!pw) return $('#lErr').textContent='Nhập mật khẩu.';
+  SHS.busy('Đang kiểm tra mật khẩu...');
+  try{
+    const r=await SHS.login(S.auth,name,pw);
+    if(r.user.role!=='owner') throw new Error('Tài khoản này không có quyền quản trị viên.');
+    S.K=r.K;S.token=r.token;S.me=name;S.api=SHS.gh(r.token,S.auth.repo,S.auth.branch||'main');
+    $('#lPw').value='';enter();
+  }catch(e){$('#lErr').textContent=e.message}finally{SHS.busy(false)}
+}
+$('#lGo').onclick=doLogin;$('#lPw').onkeydown=e=>{if(e.key==='Enter')doLogin()};
+$('#logout').onclick=()=>location.reload();
+
+function enter(){
+  $('#who').hidden=false;$('#whoName').textContent=S.me;
+  $('#tExp').value=$('#rExp').value=plusYear();
+  render();show('vMain');
+}
+function render(){
+  $('#ulist').innerHTML=S.auth.users.map((u,i)=>`
+    <div class="ad-row" data-i="${i}">
+      <div class="ad-info"><div class="ad-t">${esc(u.name)}${u.name===S.me?' (anh/chị)':''}</div>
+        <div class="ad-m"><span class="badge ${u.role==='owner'?'own':'on'}">${u.role==='owner'?'Quản trị viên':'Biên tập viên'}</span></div></div>
+      <div class="ad-act">
+        <button class="btn btn-line btn-sm" data-a="pw">Đặt lại mật khẩu</button>
+        ${u.name===S.me?'':'<button class="btn btn-line btn-sm danger" data-a="del">Xóa</button>'}
+      </div>
+    </div>`).join('');
+  const exp=S.auth.tokenExpires;
+  $('#tokInfo').textContent=exp?`Mã hiện tại hết hạn ngày ${SHS.fmtDate(exp)} (còn ${Math.ceil((new Date(exp)-new Date())/864e5)} ngày).`:'Chưa khai báo ngày hết hạn.';
+  $('#rUsers').innerHTML=S.auth.users.filter(u=>u.name!==S.me).map(u=>`<label>Mật khẩu mới cho ${esc(u.name)}<input type="password" autocomplete="new-password" data-u="${esc(u.name)}"></label>`).join('');
+}
+
+/* ---------- Người dùng ---------- */
+$('#ulist').onclick=async e=>{
+  const b=e.target.closest('button[data-a]');if(!b)return;
+  const u=S.auth.users[+b.closest('.ad-row').dataset.i];
+  if(b.dataset.a==='del'){
+    if(!confirm(`Xóa người dùng "${u.name}"? Người này sẽ không đăng nhập được nữa.\n\nNếu người này rành kỹ thuật, nên dùng thêm mục "Thu hồi triệt để".`))return;
+    const bak=S.auth.users.slice();S.auth.users=S.auth.users.filter(x=>x!==u);
+    SHS.busy('Đang lưu...');try{await saveAuth(`xóa người dùng ${u.name}`);render()}catch(err){S.auth.users=bak;SHS.toast(err.message,4000)}finally{SHS.busy(false)}
+  }
+  if(b.dataset.a==='pw'){
+    const pw=prompt(`Mật khẩu mới cho ${u.name} (tối thiểu 12 ký tự):`);if(pw===null)return;
+    const pe=pwOk(pw);if(pe)return alert(pe);
+    SHS.busy('Đang mã hóa và lưu...');const bak={...u};
+    try{Object.assign(u,await SHS.wrapMaster(S.K,pw));await saveAuth(`đặt lại mật khẩu ${u.name}`);SHS.toast('Đã đặt lại mật khẩu.')}
+    catch(err){Object.assign(u,bak);SHS.toast(err.message,4000)}finally{SHS.busy(false)}
+  }
+};
+$('#aGo').onclick=async()=>{
+  $('#aErr').textContent='';const name=$('#aName').value.trim(),role=$('#aRole').value,pw=$('#aPw').value;
+  if(!name)return $('#aErr').textContent='Nhập tên.';
+  if(S.auth.users.some(u=>u.name.toLowerCase()===name.toLowerCase()))return $('#aErr').textContent='Tên này đã có.';
+  const pe=pwOk(pw);if(pe)return $('#aErr').textContent=pe;
+  SHS.busy('Đang mã hóa và lưu...');
+  try{const u={name,role,...await SHS.wrapMaster(S.K,pw)};S.auth.users.push(u);
+    try{await saveAuth(`thêm người dùng ${name}`)}catch(err){S.auth.users.pop();throw err}
+    $('#aName').value=$('#aPw').value='';render();SHS.toast('Đã thêm '+name);
+  }catch(err){$('#aErr').textContent=err.message}finally{SHS.busy(false)}
+};
+
+/* ---------- Thay mã GitHub ---------- */
+$('#tGo').onclick=async()=>{
+  $('#tErr').textContent='';const tok=$('#tTok').value.trim(),exp=$('#tExp').value;
+  if(!tok)return $('#tErr').textContent='Dán mã mới.';
+  SHS.busy('Đang kiểm tra mã mới...');const bak={t:S.auth.token,e:S.auth.tokenExpires,api:S.api};
+  try{
+    S.api=await checkToken(tok,S.auth.repo,S.auth.branch||'main');
+    S.auth.token=await SHS.encToken(S.K,tok);S.auth.tokenExpires=exp;S.token=tok;
+    await saveAuth('thay mã truy cập GitHub');$('#tTok').value='';render();SHS.toast('Đã thay mã. Nhớ xóa mã cũ trên GitHub.',4000);
+  }catch(err){Object.assign(S.auth,{token:bak.t,tokenExpires:bak.e});S.api=bak.api;$('#tErr').textContent=err.message}finally{SHS.busy(false)}
+};
+
+/* ---------- Thu hồi triệt để ---------- */
+$('#rGo').onclick=async()=>{
+  $('#rErr').textContent='';const tok=$('#rTok').value.trim(),exp=$('#rExp').value,my=$('#rMy').value;
+  if(!tok)return $('#rErr').textContent='Cần mã GitHub mới.';
+  const inputs=[...document.querySelectorAll('#rUsers input')];
+  for(const i of inputs){const pe=pwOk(i.value);if(pe)return $('#rErr').textContent=`${i.dataset.u}: ${pe}`}
+  SHS.busy('Đang kiểm tra...');
+  try{
+    const me=S.auth.users.find(u=>u.name===S.me);
+    try{await SHS.unwrapMaster(me,my)}catch(e){throw new Error('Mật khẩu hiện tại của anh/chị không đúng.')}
+    if(!confirm('Tạo khóa mới và đặt lại mật khẩu cho tất cả? Mọi người đang đăng nhập sẽ phải đăng nhập lại bằng mật khẩu mới.'))return;
+    SHS.busy('Đang tạo khóa mới...');
+    const api=await checkToken(tok,S.auth.repo,S.auth.branch||'main');
+    const K=SHS.newMaster();
+    const users=[];
+    for(const u of S.auth.users){
+      const pw=u.name===S.me?my:inputs.find(i=>i.dataset.u===u.name).value;
+      users.push({name:u.name,role:u.role,...await SHS.wrapMaster(K,pw)});
+    }
+    const next={...S.auth,token:await SHS.encToken(K,tok),tokenExpires:exp,users};
+    const bak=[S.auth,S.api,S.K];S.auth=next;S.api=api;S.K=K;S.token=tok;
+    try{await saveAuth('thu hồi triệt để, tạo khóa mới')}catch(err){[S.auth,S.api,S.K]=bak;throw err}
+    $('#rTok').value=$('#rMy').value='';render();SHS.toast('Đã tạo khóa mới. Gửi mật khẩu mới cho từng người và xóa mã cũ trên GitHub.',5000);
+  }catch(err){$('#rErr').textContent=err.message}finally{SHS.busy(false)}
+};
+
+boot();
+</script>
+</body>
+</html>
