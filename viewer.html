@@ -63,7 +63,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
 const id=params.get('id');
-let book=null,pdf=null,issue=null,images=[],ratio=1.414,total=0;
+let book=null,pdf=null,issue=null,images=[],ratio=1.414,total=0,slots=[];
 
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
 function fail(msg){$('#loadText').textContent=msg;$('.bar').style.display='none'}
@@ -135,10 +135,13 @@ async function load(){
     maxShadowOpacity:.45,flippingTime:700,swipeDistance:20
   });
   /* Chế độ HTML: trình duyệt tự hiển thị ảnh ở độ nét gốc, không qua canvas trung gian */
-  const nodes=images.map((src,i)=>{
-    const d=document.createElement('div');d.className='page';
-    const im=document.createElement('img');im.src=src;im.alt='Trang '+(i+1);im.draggable=false;
-    d.appendChild(im);$('#book').appendChild(d);return d;
+  /* Bìa trước và bìa sau luôn đứng 1 trang. Số trang lẻ thì chèn 1 trang trắng trước bìa sau */
+  slots=images.map((_,i)=>i);
+  if(total>2&&total%2===1) slots.splice(total-1,0,null);
+  const nodes=slots.map(k=>{
+    const d=document.createElement('div');d.className='page'+(k===null?' blank':'');
+    if(k!==null){const im=document.createElement('img');im.src=images[k];im.alt='Trang '+(k+1);im.draggable=false;d.appendChild(im)}
+    $('#book').appendChild(d);return d;
   });
   book.loadFromHTML(nodes);
   book.on('flip',updatePg);
@@ -146,24 +149,38 @@ async function load(){
   buildThumbs();
   $('#loader').remove();
   const p=parseInt((location.hash.match(/p=(\d+)/)||[])[1]||'1',10);
-  if(p>1&&p<=total) book.turnToPage(p-1);
+  if(p>1&&p<=total) book.turnToPage(slots.indexOf(p-1));
   updatePg();
 }
 
-function curIdx(){return book?book.getCurrentPageIndex():0}
+/* Trang thật (0-based) đang xem; trang trắng chèn thêm thì lấy trang liền trước */
+function curIdx(){
+  if(!book)return 0;const s=book.getCurrentPageIndex();
+  return slots[s]!=null?slots[s]:slots[s-1];
+}
+/* Đẩy sách vào giữa khi chỉ có 1 trang hiển thị (bìa trước nằm nửa phải, bìa sau nằm nửa trái) */
+function center(land,s){
+  let x=0;
+  if(land){if(s===0)x=-25;else if(s===slots.length-1&&slots.length%2===0)x=25}
+  $('#book').style.transform=`translateX(${x}%)`;
+}
 function updatePg(){
   if(!book)return;
-  const i=curIdx();let label=String(i+1);
-  if(book.getOrientation()==='landscape'&&i>0&&i<total-1){const a=i%2?i:i-1;label=`${a+1}-${Math.min(a+2,total)}`}
+  const s=book.getCurrentPageIndex(),land=book.getOrientation()==='landscape';
+  let shown=[s];
+  if(land&&s>0&&!(s===slots.length-1&&slots.length%2===0)){const a=s%2?s:s-1;shown=[a,a+1]}
+  const real=shown.map(x=>slots[x]).filter(x=>x!=null);
+  const label=real.length>1?`${real[0]+1}-${real[real.length-1]+1}`:String(real[0]+1);
+  center(land,s);
   $('#pg').textContent=`${label} / ${total}`;
-  history.replaceState(null,'',`?id=${encodeURIComponent(id)}#p=${i+1}`);
-  document.querySelectorAll('#thumbs button').forEach((b,k)=>b.classList.toggle('active',k===i));
+  history.replaceState(null,'',`?id=${encodeURIComponent(id)}#p=${real[0]+1}`);
+  document.querySelectorAll('#thumbs button').forEach((b,k)=>b.classList.toggle('active',real.includes(k)));
   const act=document.querySelector('#thumbs button.active');if(act&&$('#thumbs').classList.contains('open'))act.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
 }
 
 function buildThumbs(){
   $('#thumbs').innerHTML=images.map((src,k)=>`<button data-k="${k}" aria-label="Trang ${k+1}"><img src="${src}" loading="lazy" alt=""><span>${k+1}</span></button>`).join('');
-  $('#thumbs').onclick=e=>{const b=e.target.closest('button');if(b)book.flip(+b.dataset.k)};
+  $('#thumbs').onclick=e=>{const b=e.target.closest('button');if(b)book.flip(slots.indexOf(+b.dataset.k))};
 }
 
 const prev=()=>book&&book.flipPrev(), next=()=>book&&book.flipNext();
