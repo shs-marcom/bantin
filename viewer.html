@@ -76,14 +76,23 @@ function fitWrap(){
   $('#bookWrap').style.width=w+'px';
 }
 
-async function renderPdfPage(n,targetW){
+/* Vẽ trang PDF thành ảnh. Độ phân giải theo kích thước hiển thị thật x mật độ điểm ảnh màn hình */
+async function renderPdfPage(n,targetW,type){
   const page=await pdf.getPage(n);
   const vp0=page.getViewport({scale:1});
   const vp=page.getViewport({scale:targetW/vp0.width});
   const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
   const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
   await page.render({canvasContext:ctx,viewport:vp}).promise;
-  return c.toDataURL('image/jpeg',0.86);
+  const blob=await new Promise(r=>c.toBlob(r,type==='png'?'image/png':'image/jpeg',0.95));
+  c.width=c.height=0;
+  return URL.createObjectURL(blob);
+}
+function sharpWidth(){
+  const wrapW=parseFloat($('#bookWrap').style.width)||window.innerWidth;
+  const pageCss=isMobile()?wrapW:wrapW/2;
+  const dpr=Math.min(window.devicePixelRatio||1,3);
+  return Math.round(Math.min(2400,Math.max(1100,pageCss*dpr*1.5)));
 }
 
 async function load(){
@@ -105,7 +114,8 @@ async function load(){
     }else{
       pdf=await pdfjsLib.getDocument(issue.pdf+(issue.v?'?v='+issue.v:'')).promise;total=pdf.numPages;
       const p1=await pdf.getPage(1);const v=p1.getViewport({scale:1});ratio=v.height/v.width;
-      const targetW=Math.min(1400,Math.round(900*Math.min(devicePixelRatio||1,2)));
+      fitWrap();
+      const targetW=sharpWidth();
       for(let i=1;i<=total;i++){
         $('#loadText').textContent=`Đang tải trang ${i}/${total}...`;
         images.push(await renderPdfPage(i,targetW));
@@ -122,7 +132,13 @@ async function load(){
     showCover:true,usePortrait:true,mobileScrollSupport:false,
     maxShadowOpacity:.45,flippingTime:700,swipeDistance:20
   });
-  book.loadFromImages(images);
+  /* Chế độ HTML: trình duyệt tự hiển thị ảnh ở độ nét gốc, không qua canvas trung gian */
+  const nodes=images.map((src,i)=>{
+    const d=document.createElement('div');d.className='page';
+    const im=document.createElement('img');im.src=src;im.alt='Trang '+(i+1);im.draggable=false;
+    d.appendChild(im);$('#book').appendChild(d);return d;
+  });
+  book.loadFromHTML(nodes);
   book.on('flip',updatePg);
   book.on('changeOrientation',updatePg);
   buildThumbs();
@@ -163,7 +179,7 @@ async function openZoom(){
   if(!book)return;const i=curIdx();
   $('#zoomImg').src=images[i];zw=isMobile()?100:60;$('#zoomImg').style.width=zw+'%';
   $('#zoom').classList.add('open');
-  if(pdf){try{$('#zoomImg').src=await renderPdfPage(i+1,2200)}catch(e){}}
+  if(pdf){try{$('#zoomImg').src=await renderPdfPage(i+1,2800,'png')}catch(e){}}
 }
 function closeZoom(){$('#zoom').classList.remove('open')}
 $('#bZoom').onclick=openZoom;$('#zClose').onclick=closeZoom;
