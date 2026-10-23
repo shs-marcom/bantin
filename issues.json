@@ -1,6 +1,15 @@
 {
   "issues": [
     {
+      "id": "2026-10-shs-connect-thang-10-2026",
+      "so": "10/2026",
+      "title": "SHS Connect tháng 10/2026",
+      "date": "2026-10-23",
+      "desc": "Bản tin SHS Connect tháng 10/2026",
+      "pdf": "issues/2026-10-shs-connect-thang-10-2026.pdf",
+      "v": 1792742083658
+    },
+    {
       "id": "2026-10-ban-mau",
       "so": "Số mẫu",
       "title": "Bản tin nội bộ SHS - Bản mẫu test giao diện",
