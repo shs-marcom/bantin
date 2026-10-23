@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bản tin nội bộ SHS</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Thư viện bản tin truyền thông nội bộ SHS do TT.Marcom thực hiện.">
+<meta property="og:title" content="Bản tin nội bộ SHS">
+<meta property="og:description" content="Đọc các số bản tin nội bộ SHS trên điện thoại và máy tính.">
+<meta property="og:image" content="assets/og-cover.png">
+<meta name="theme-color" content="#0A2762">
+<link rel="icon" href="assets/logo-light.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="./">
+      <img src="assets/logo-dark.png" alt="SHS">
+      <span class="brand-sep"></span>
+      <span class="brand-title">Bản tin nội bộ<small>TT.Marcom SHS</small></span>
+    </a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" id="hero" hidden>
+    <div class="hero-cover skeleton" id="heroCover"></div>
+    <div class="hero-body">
+      <span class="tag">Số mới nhất</span>
+      <h1 id="heroTitle"></h1>
+      <p id="heroDesc"></p>
+      <div class="btn-row">
+        <a class="btn btn-orange" id="heroRead">Đọc ngay</a>
+        <a class="btn btn-ghost" id="heroDl" download>Tải PDF</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <h2>Tất cả các số</h2>
+    <div class="chips" id="years"></div>
+    <input class="search" id="q" type="search" placeholder="Tìm theo tên bản tin...">
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer class="footer"><b>SHS</b> · Kiến tạo Tài chính Thịnh vượng · Bản tin do TT.Marcom thực hiện</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const $=s=>document.querySelector(s);
+const fmtDate=d=>{const [y,m,dd]=(d||'').split('-');return dd?`${dd}/${m}/${y}`:(d||'')};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let ALL=[],year='all';
+
+/* Ảnh bìa: dùng "cover" nếu có, không thì vẽ trang 1 của PDF hoặc ảnh trang đầu */
+async function drawCover(el,it){
+  try{
+    if(it.cover||(it.pages&&it.pages[0])){
+      const img=new Image();img.alt=it.title;img.loading='lazy';img.src=it.cover||it.pages[0];
+      img.onload=()=>el.classList.remove('skeleton');el.appendChild(img);return;
+    }
+    const pdf=await pdfjsLib.getDocument(it.pdf).promise;
+    const page=await pdf.getPage(1);
+    const vp0=page.getViewport({scale:1});
+    const scale=(el.clientWidth||200)*Math.min(devicePixelRatio||1,2)/vp0.width;
+    const vp=page.getViewport({scale});
+    const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+    await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;
+    el.appendChild(c);el.classList.remove('skeleton');
+  }catch(e){el.classList.remove('skeleton');el.innerHTML='<div class="empty">Không tải được bìa</div>'}
+}
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){io.unobserve(e.target);drawCover(e.target,ALL.find(x=>x.id===e.target.dataset.id))}}),{rootMargin:'200px'});
+
+function render(){
+  const q=$('#q').value.trim().toLowerCase();
+  const list=ALL.filter(it=>(year==='all'||(it.date||'').startsWith(year))&&(!q||(it.title+' '+(it.so||'')+' '+(it.desc||'')).toLowerCase().includes(q)));
+  const g=$('#grid');
+  if(!list.length){g.innerHTML='<div class="empty" style="grid-column:1/-1">Chưa có bản tin phù hợp.</div>';return}
+  g.innerHTML=list.map(it=>`
+    <a class="card" href="viewer.html?id=${encodeURIComponent(it.id)}">
+      <div class="card-cover skeleton" data-id="${esc(it.id)}"></div>
+      <div class="card-body">
+        ${it.so?`<span class="card-no">${esc(it.so)}</span>`:''}
+        <span class="card-title">${esc(it.title)}</span>
+        <span class="card-date">${fmtDate(it.date)}</span>
+      </div>
+    </a>`).join('');
+  g.querySelectorAll('.card-cover').forEach(el=>io.observe(el));
+}
+
+fetch('issues.json',{cache:'no-cache'}).then(r=>r.json()).then(data=>{
+  ALL=(data.issues||[]).filter(it=>!it.hidden).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(!ALL.length){$('#grid').innerHTML='<div class="empty" style="grid-column:1/-1">Chưa có bản tin nào.</div>';return}
+  const top=ALL[0];
+  $('#hero').hidden=false;
+  $('#heroTitle').textContent=top.title;
+  $('#heroDesc').textContent=top.desc||[top.so,fmtDate(top.date)].filter(Boolean).join(' · ');
+  $('#heroRead').href='viewer.html?id='+encodeURIComponent(top.id);
+  const dl=top.download||top.pdf; if(dl){$('#heroDl').href=dl}else{$('#heroDl').remove()}
+  drawCover($('#heroCover'),top);
+  const years=[...new Set(ALL.map(it=>(it.date||'').slice(0,4)).filter(Boolean))];
+  $('#years').innerHTML=['all',...years].map(y=>`<button class="chip${y==='all'?' active':''}" data-y="${y}">${y==='all'?'Tất cả':y}</button>`).join('');
+  $('#years').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;year=b.dataset.y;
+    $('#years').querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===b));render()};
+  $('#q').oninput=render;
+  render();
+}).catch(()=>{$('#grid').innerHTML='<div class="empty" style="grid-column:1/-1">Không đọc được danh sách bản tin (issues.json). Nếu đang mở file trực tiếp trên máy, hãy xem trên link GitHub Pages.</div>'});
+</script>
+</body>
+</html>

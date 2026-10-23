@@ -1,0 +1,12 @@
+{
+  "issues": [
+    {
+      "id": "2026-10-ban-mau",
+      "so": "Số mẫu",
+      "title": "Bản tin nội bộ SHS - Bản mẫu test giao diện",
+      "date": "2026-10-23",
+      "desc": "Bản mẫu để test trang lật. Xóa mục này khi đăng số thật đầu tiên.",
+      "pdf": "issues/2026-10-ban-mau.pdf"
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bản tin nội bộ SHS</title>
+<meta name="robots" content="noindex,nofollow">
+<meta property="og:title" content="Bản tin nội bộ SHS">
+<meta property="og:description" content="Mời anh/chị đọc bản tin nội bộ SHS.">
+<meta property="og:image" content="assets/og-cover.png">
+<meta name="theme-color" content="#0A2762">
+<link rel="icon" href="assets/logo-light.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="viewer">
+<div class="v-app" id="app">
+  <div class="v-top">
+    <a class="ibtn" href="./" title="Về thư viện bản tin" aria-label="Về thư viện">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </a>
+    <img src="assets/logo-dark.png" alt="SHS" style="height:24px" class="hide-m">
+    <div class="v-title" id="title">Đang tải...</div>
+    <button class="ibtn" id="bThumbs" title="Danh sách trang"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+    <button class="ibtn" id="bZoom" title="Phóng to trang"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg></button>
+    <button class="ibtn" id="bShare" title="Chia sẻ"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+    <button class="ibtn hide-m" id="bFull" title="Toàn màn hình"><svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button>
+    <a class="ibtn dl" id="bDl" download title="Tải bản tin về máy"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Tải về</span></a>
+  </div>
+
+  <div class="v-stage" id="stage">
+    <button class="nav-side nav-prev" id="prev" aria-label="Trang trước"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div id="bookWrap"><div id="book"></div></div>
+    <button class="nav-side nav-next" id="next" aria-label="Trang sau"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    <div class="loader" id="loader"><img src="assets/logo-dark.png" alt="" style="height:44px"><div class="bar"><i id="barFill"></i></div><p id="loadText">Đang chuẩn bị bản tin...</p></div>
+  </div>
+
+  <div class="thumbs" id="thumbs"></div>
+  <div class="v-bottom">
+    <button class="ibtn" id="prev2" aria-label="Trang trước"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span class="pg" id="pg">- / -</span>
+    <button class="ibtn" id="next2" aria-label="Trang sau"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>
+</div>
+
+<div class="zoom" id="zoom">
+  <div class="zoom-top">
+    <button class="ibtn" id="zOut" title="Thu nhỏ"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/></svg></button>
+    <button class="ibtn" id="zIn" title="Phóng to"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg></button>
+    <button class="ibtn" id="zClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="zoom-body" id="zoomBody"><img id="zoomImg" alt=""></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const $=s=>document.querySelector(s);
+const params=new URLSearchParams(location.search);
+const id=params.get('id');
+let book=null,pdf=null,issue=null,images=[],ratio=1.414,total=0;
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2200)}
+function fail(msg){$('#loadText').textContent=msg;$('.bar').style.display='none'}
+const isMobile=()=>window.innerWidth<768;
+
+/* Tính khung sách vừa màn hình: desktop 2 trang, mobile 1 trang */
+function fitWrap(){
+  const st=$('#stage');const pad=isMobile()?16:120;
+  const availW=st.clientWidth-pad, availH=st.clientHeight-(isMobile()?16:28);
+  const pages=isMobile()?1:2;
+  const w=Math.max(260,Math.min(availW,pages*availH/ratio));
+  $('#bookWrap').style.width=w+'px';
+}
+
+async function renderPdfPage(n,targetW){
+  const page=await pdf.getPage(n);
+  const vp0=page.getViewport({scale:1});
+  const vp=page.getViewport({scale:targetW/vp0.width});
+  const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+  const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  return c.toDataURL('image/jpeg',0.86);
+}
+
+async function load(){
+  if(!id) return fail('Thiếu mã bản tin trong đường dẫn.');
+  let data;
+  try{data=await (await fetch('issues.json',{cache:'no-cache'})).json()}catch(e){return fail('Không đọc được danh sách bản tin.')}
+  issue=(data.issues||[]).find(x=>x.id===id);
+  if(!issue) return fail('Không tìm thấy bản tin này. Có thể link đã cũ.');
+  document.title=issue.title+' | Bản tin nội bộ SHS';
+  $('#title').innerHTML='';$('#title').textContent=issue.title;
+  if(issue.so){const s=document.createElement('small');s.textContent=issue.so;$('#title').appendChild(s)}
+  const dl=issue.download||issue.pdf;
+  if(dl){$('#bDl').href=dl;$('#bDl').setAttribute('download',dl.split('/').pop())}else $('#bDl').remove();
+
+  try{
+    if(issue.pages&&issue.pages.length){
+      images=issue.pages;total=images.length;
+      const im=new Image();im.src=images[0];await im.decode();ratio=im.naturalHeight/im.naturalWidth;
+    }else{
+      pdf=await pdfjsLib.getDocument(issue.pdf).promise;total=pdf.numPages;
+      const p1=await pdf.getPage(1);const v=p1.getViewport({scale:1});ratio=v.height/v.width;
+      const targetW=Math.min(1400,Math.round(900*Math.min(devicePixelRatio||1,2)));
+      for(let i=1;i<=total;i++){
+        $('#loadText').textContent=`Đang tải trang ${i}/${total}...`;
+        images.push(await renderPdfPage(i,targetW));
+        $('#barFill').style.width=(i/total*100)+'%';
+      }
+    }
+  }catch(e){console.error(e);return fail('Không mở được file bản tin. Vui lòng thử lại hoặc bấm Tải về.')}
+
+  fitWrap();
+  const pageW=600,pageH=Math.round(600*ratio);
+  book=new St.PageFlip($('#book'),{
+    width:pageW,height:pageH,size:'stretch',
+    minWidth:240,maxWidth:1400,minHeight:Math.round(240*ratio),maxHeight:Math.round(1400*ratio),
+    showCover:true,usePortrait:true,mobileScrollSupport:false,
+    maxShadowOpacity:.45,flippingTime:700,swipeDistance:20
+  });
+  book.loadFromImages(images);
+  book.on('flip',updatePg);
+  book.on('changeOrientation',updatePg);
+  buildThumbs();
+  $('#loader').remove();
+  const p=parseInt((location.hash.match(/p=(\d+)/)||[])[1]||'1',10);
+  if(p>1&&p<=total) book.turnToPage(p-1);
+  updatePg();
+}
+
+function curIdx(){return book?book.getCurrentPageIndex():0}
+function updatePg(){
+  if(!book)return;
+  const i=curIdx();let label=String(i+1);
+  if(book.getOrientation()==='landscape'&&i>0&&i<total-1){const a=i%2?i:i-1;label=`${a+1}-${Math.min(a+2,total)}`}
+  $('#pg').textContent=`${label} / ${total}`;
+  history.replaceState(null,'',`?id=${encodeURIComponent(id)}#p=${i+1}`);
+  document.querySelectorAll('#thumbs button').forEach((b,k)=>b.classList.toggle('active',k===i));
+  const act=document.querySelector('#thumbs button.active');if(act&&$('#thumbs').classList.contains('open'))act.scrollIntoView({inline:'center',block:'nearest',behavior:'smooth'});
+}
+
+function buildThumbs(){
+  $('#thumbs').innerHTML=images.map((src,k)=>`<button data-k="${k}" aria-label="Trang ${k+1}"><img src="${src}" loading="lazy" alt=""><span>${k+1}</span></button>`).join('');
+  $('#thumbs').onclick=e=>{const b=e.target.closest('button');if(b)book.flip(+b.dataset.k)};
+}
+
+const prev=()=>book&&book.flipPrev(), next=()=>book&&book.flipNext();
+['#prev','#prev2'].forEach(s=>$(s).onclick=prev);
+['#next','#next2'].forEach(s=>$(s).onclick=next);
+document.addEventListener('keydown',e=>{
+  if($('#zoom').classList.contains('open')){if(e.key==='Escape')closeZoom();return}
+  if(e.key==='ArrowLeft')prev();if(e.key==='ArrowRight')next();
+});
+$('#bThumbs').onclick=()=>{$('#thumbs').classList.toggle('open');setTimeout(()=>{fitWrap();book&&book.update();updatePg()},50)};
+
+/* Phóng to: vẽ lại trang hiện tại ở độ phân giải cao */
+let zw=100;
+async function openZoom(){
+  if(!book)return;const i=curIdx();
+  $('#zoomImg').src=images[i];zw=isMobile()?100:60;$('#zoomImg').style.width=zw+'%';
+  $('#zoom').classList.add('open');
+  if(pdf){try{$('#zoomImg').src=await renderPdfPage(i+1,2200)}catch(e){}}
+}
+function closeZoom(){$('#zoom').classList.remove('open')}
+$('#bZoom').onclick=openZoom;$('#zClose').onclick=closeZoom;
+$('#zIn').onclick=()=>{zw=Math.min(400,zw+40);$('#zoomImg').style.width=zw+'%'};
+$('#zOut').onclick=()=>{zw=Math.max(40,zw-40);$('#zoomImg').style.width=zw+'%'};
+
+$('#bShare').onclick=async()=>{
+  const url=location.href;
+  if(navigator.share){try{await navigator.share({title:issue?issue.title:'Bản tin nội bộ SHS',url});return}catch(e){if(e.name==='AbortError')return}}
+  try{await navigator.clipboard.writeText(url);toast('Đã copy link đến trang đang xem')}catch(e){prompt('Copy link:',url)}
+};
+
+if(!document.fullscreenEnabled)$('#bFull').remove();
+else $('#bFull').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+
+let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(book){fitWrap();book.update();updatePg()}},150)});
+load();
+</script>
+</body>
+</html>
