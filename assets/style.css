@@ -86,7 +86,9 @@ body.viewer{background:#1b2232;color:#fff;overflow:hidden;height:100dvh}
 .ibtn.dl{background:var(--shs-orange);width:auto;padding:0 14px;gap:6px;font-weight:600;font-size:14px}
 .ibtn.dl:hover{filter:brightness(1.08);background:var(--shs-orange)}
 .v-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;padding:14px}
-#bookWrap{margin:0 auto;filter:drop-shadow(0 12px 28px rgba(0,0,0,.45))}
+#bookWrap{margin:0 auto;position:relative}
+/* Bóng tĩnh nằm dưới sách, không vẽ lại khi lật trang */
+#bookShadow{position:absolute;top:0;bottom:0;left:0;width:100%;box-shadow:0 14px 36px rgba(0,0,0,.45);transition:left .45s ease,width .45s ease;pointer-events:none}
 /* Cắt phần trang đang lật tràn ra trên/dưới khung sách, giữ nguyên chiều ngang */
 #book{transition:transform .45s ease;clip-path:inset(0 -100% 0 -100%)}
 #book .page{background:#fff;overflow:hidden}

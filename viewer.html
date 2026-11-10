@@ -33,7 +33,7 @@
 
   <div class="v-stage" id="stage">
     <button class="nav-side nav-prev" id="prev" aria-label="Trang trước"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <div id="bookWrap"><div id="book"></div></div>
+    <div id="bookWrap"><div id="bookShadow"></div><div id="book"></div></div>
     <button class="nav-side nav-next" id="next" aria-label="Trang sau"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
     <div class="loader" id="loader"><img src="assets/logo-dark.png" alt="" style="height:44px"><div class="bar"><i id="barFill"></i></div><p id="loadText">Đang chuẩn bị bản tin...</p></div>
   </div>
@@ -198,6 +198,7 @@ function center(land,s){
   let x=0;
   if(land){if(s===0)x=-25;else if(s===slots.length-1&&slots.length%2===0)x=25}
   $('#book').style.transform=`translateX(${x}%)`;
+  const sh=$('#bookShadow');if(sh){const one=land&&x!==0;sh.style.left=one?'25%':'0';sh.style.width=one?'50%':'100%'}
 }
 function updatePg(){
   if(!book)return;
