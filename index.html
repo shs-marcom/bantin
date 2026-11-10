@@ -25,6 +25,10 @@
       <span class="brand-sep"></span>
       <span class="brand-title">Bản tin nội bộ<small>TT.Marcom SHS</small></span>
     </a>
+    <nav class="topnav">
+      <a href="#ban-tin">Bản tin</a>
+      <a href="so-tay.html" id="navHb" hidden>Sổ tay VHDN</a>
+    </nav>
   </div>
 </header>
 
@@ -42,7 +46,20 @@
     </div>
   </section>
 
-  <div class="toolbar">
+  <section class="hb" id="hb" hidden>
+    <a class="hb-cover skeleton" id="hbCover" href="so-tay.html" aria-label="Đọc Sổ tay"></a>
+    <div class="hb-body">
+      <span class="hb-lb">Sổ tay Văn hóa doanh nghiệp</span>
+      <h2 id="hbTitle"></h2>
+      <p id="hbDesc"></p>
+      <div class="btn-row">
+        <a class="btn btn-blue" href="so-tay.html">Đọc Sổ tay</a>
+        <a class="btn btn-line" id="hbDl" download>Tải PDF</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="toolbar" id="ban-tin">
     <h2>Tất cả các số</h2>
     <div class="chips" id="years"></div>
     <input class="search" id="q" type="search" placeholder="Tìm theo tên bản tin...">
@@ -59,7 +76,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/p
 const $=s=>document.querySelector(s);
 const fmtDate=d=>{const [y,m,dd]=(d||'').split('-');return dd?`${dd}/${m}/${y}`:(d||'')};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let ALL=[],year='all';
+let ALL=[],HB=null,year='all';
 
 /* Ảnh bìa: dùng "cover" nếu có, không thì vẽ trang 1 của PDF hoặc ảnh trang đầu */
 async function drawCover(el,it){
@@ -99,7 +116,15 @@ function render(){
 }
 
 fetch('issues.json',{cache:'no-cache'}).then(r=>r.json()).then(data=>{
-  ALL=(data.issues||[]).filter(it=>!it.hidden).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const pub=(data.issues||[]).filter(it=>!it.hidden);
+  HB=pub.find(it=>it.section==='so-tay')||null;
+  ALL=pub.filter(it=>!it.section).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(HB){
+    $('#hb').hidden=false;$('#navHb').hidden=false;
+    $('#hbTitle').textContent=HB.title;$('#hbDesc').textContent=HB.desc||'';
+    const d=HB.download||HB.pdf;if(d)$('#hbDl').href=d+(HB.v&&!HB.download?'?v='+HB.v:'');else $('#hbDl').remove();
+    drawCover($('#hbCover'),HB);
+  }
   if(!ALL.length){$('#grid').innerHTML='<div class="empty" style="grid-column:1/-1">Chưa có bản tin nào.</div>';return}
   const top=ALL[0];
   $('#hero').hidden=false;

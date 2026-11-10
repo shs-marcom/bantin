@@ -17,6 +17,15 @@
       "desc": "Bản mẫu để test trang lật. Xóa mục này khi đăng số thật đầu tiên.",
       "pdf": "issues/2026-10-ban-mau.pdf",
       "hidden": true
+    },
+    {
+      "id": "so-tay-vhdn",
+      "section": "so-tay",
+      "title": "Sổ tay Văn hóa Người Kiến Tạo",
+      "date": "2026-09-15",
+      "desc": "Sứ mệnh, tầm nhìn, giá trị cốt lõi SHSERS và quy tắc ứng xử của người SHS.",
+      "pdf": "issues/so-tay-vhdn.pdf",
+      "v": 1794290000000
     }
   ]
 }
