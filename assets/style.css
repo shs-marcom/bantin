@@ -218,7 +218,6 @@ label input:focus,label select:focus,label textarea:focus{outline:2px solid var(
 .hb p{color:var(--muted);font-size:14.5px;line-height:1.5;margin-bottom:14px}
 .btn-blue{background:var(--shs-blue);color:#fff}
 .btn-line{background:#fff;border:1px solid var(--line);color:var(--text)}
-#book .page{position:relative}
 #book .page.loading::after{content:"Đang tải trang...";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8a93a6;font-size:14px}
 #book .page.loading img{visibility:hidden}
 .thumbs img{background:#2a3142}
