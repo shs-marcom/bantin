@@ -41,7 +41,8 @@
   <div class="thumbs" id="thumbs"></div>
   <div class="v-bottom">
     <button class="ibtn" id="prev2" aria-label="Trang trước"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
-    <span class="pg" id="pg">- / -</span>
+    <button class="pg" id="pg" title="Bấm để đến trang bất kỳ">- / -</button>
+    <form class="go" id="goForm" hidden><span>Đến trang</span><input id="goIn" type="number" inputmode="numeric" min="1" aria-label="Số trang"><span id="goTot"></span><button class="go-ok" type="submit">Đi</button></form>
     <button class="ibtn" id="next2" aria-label="Trang sau"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
   </div>
 </div>
@@ -218,10 +219,29 @@ function buildThumbs(){
 }
 
 const prev=()=>book&&book.flipPrev(), next=()=>book&&book.flipNext();
+
+/* Đến trang bất kỳ: bấm vào số trang, gõ số, Enter */
+function closeGo(){$('#goForm').hidden=true;$('#pg').hidden=false}
+$('#pg').onclick=()=>{
+  if(!book)return;
+  $('#pg').hidden=true;$('#goForm').hidden=false;$('#goTot').textContent='/ '+total;
+  const i=$('#goIn');i.max=total;i.value='';i.placeholder=String(curIdx()+1);i.focus();
+};
+$('#goForm').onsubmit=e=>{
+  e.preventDefault();
+  const n=parseInt($('#goIn').value,10);
+  if(!n||n<1||n>total){toast(`Nhập số trang từ 1 đến ${total}`);return}
+  closeGo();
+  if(pdf)renderOne(n-1);
+  book.flip(slots.indexOf(n-1));
+};
+$('#goIn').onkeydown=e=>{if(e.key==='Escape')closeGo()};
+$('#goForm').addEventListener('focusout',e=>{if(!$('#goForm').contains(e.relatedTarget))setTimeout(closeGo,150)});
 ['#prev','#prev2'].forEach(s=>$(s).onclick=prev);
 ['#next','#next2'].forEach(s=>$(s).onclick=next);
 document.addEventListener('keydown',e=>{
   if($('#zoom').classList.contains('open')){if(e.key==='Escape')closeZoom();return}
+  if(e.target.closest&&e.target.closest('#goForm'))return;
   if(e.key==='ArrowLeft')prev();if(e.key==='ArrowRight')next();
 });
 $('#bThumbs').onclick=()=>{$('#thumbs').classList.toggle('open');setTimeout(()=>{fitWrap();book&&book.update();updatePg()},50)};
