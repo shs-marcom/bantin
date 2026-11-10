@@ -89,7 +89,7 @@ Sổ tay là mục riêng: hiện thành khối riêng trên trang chủ, có n�
 - **Đăng lần đầu**: trang quản trị → khu **Sổ tay VHDN** → **Đăng Sổ tay VHDN** → điền tên, ngày, mô tả → kéo thả PDF → **Lưu**.
 - **Cập nhật phiên bản mới**: bấm **Sửa** ở khu Sổ tay → kéo thả PDF mới. Link giữ nguyên.
 - Chỉ có 1 Sổ tay, không có nút Xóa. Muốn gỡ tạm thì dùng **Ẩn**.
-- File in ấn thường rất nặng (bản gốc 15/09/2026 là 32MB). Phải nén dưới 25MB trước khi đăng, nên khoảng 10MB.
+- File in ấn thường rất nặng (bản in gốc là 32MB). Phải nén dưới 25MB trước khi đăng, nên khoảng 10MB.
 
 ### Gửi cho CBNV
 
