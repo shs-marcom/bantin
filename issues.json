@@ -1,6 +1,15 @@
 {
   "issues": [
     {
+      "id": "2026-11-shs-connect-thang-11-2026",
+      "so": "Số 04",
+      "title": "SHS Connect tháng 11/2026",
+      "date": "2026-11-27",
+      "desc": "S-Connect Tháng 11 với chuyên đề đặc biệt \"19 năm Hợp lực – Kiến tạo tài chính thịnh vượng\" - nhìn lại hành trình đáng tự hào và sẵn sàng chào đón tuổi 20 rực rỡ!",
+      "pdf": "issues/2026-11-shs-connect-thang-11-2026.pdf",
+      "v": 1795752097884
+    },
+    {
       "id": "2026-10-shs-connect-thang-10-2026",
       "so": "10/2026",
       "title": "SHS Connect tháng 10/2026",
